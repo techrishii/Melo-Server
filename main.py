@@ -124,10 +124,15 @@ def download_source(job_id: str, source_url: str) -> tuple[Path, str]:
         "socket_timeout": 30,
     }
 
-    # Use the private Render Secret File when present. Never log its contents.
+    # Copy the read-only Render secret to the writable job directory.
+    youtube_cookie_file = Path("/etc/secrets/youtube-cookies.txt")
+
     if youtube_cookie_file.is_file():
-        ydl_options["cookiefile"] = str(youtube_cookie_file)
-        logger.info("YouTube cookies file found; enabling cookie authentication.")
+        writable_cookie_file = job_work_dir / "youtube-cookies.txt"
+        shutil.copyfile(youtube_cookie_file, writable_cookie_file)
+
+        ydl_options["cookiefile"] = str(writable_cookie_file)
+        logger.info("YouTube cookies loaded from the Render secret file.")
     else:
         logger.warning("YouTube cookies file not found at %s", youtube_cookie_file)
 
