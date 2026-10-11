@@ -48,6 +48,11 @@ ffmpeg_binary = os.getenv("FFMPEG_BINARY") or (
     str(windows_ffmpeg) if windows_ffmpeg.is_file() else "ffmpeg"
 )
 
+# Render Secret Files are mounted under /etc/secrets.
+youtube_cookie_file = Path(
+    os.getenv("YOUTUBE_COOKIE_FILE", "/etc/secrets/youtube-cookies.txt")
+)
+
 JobStatus = Literal["queued", "processing", "complete", "failed"]
 
 
@@ -118,6 +123,14 @@ def download_source(job_id: str, source_url: str) -> tuple[Path, str]:
         "no_warnings": True,
         "socket_timeout": 30,
     }
+
+    # Use the private Render Secret File when present. Never log its contents.
+    if youtube_cookie_file.is_file():
+        ydl_options["cookiefile"] = str(youtube_cookie_file)
+        logger.info("YouTube cookies file found; enabling cookie authentication.")
+    else:
+        logger.warning("YouTube cookies file not found at %s", youtube_cookie_file)
+
     if max_download_bytes > 0:
         ydl_options["max_filesize"] = max_download_bytes
 
